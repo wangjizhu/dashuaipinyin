@@ -6,5 +6,6 @@ src/
 
 *.obj
 *.res
-src-mini/*.lib
-src-mini/*.exp
+
+# 引擎测试日志（test-engine.py 产生）
+scripts/rime-test-logs/

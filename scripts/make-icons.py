@@ -19,7 +19,8 @@ SLATE = (90, 103, 122, 255)    # 英文/次要态灰蓝
 ORANGE = (222, 120, 20, 255)   # 部署中
 ICONS = {
     "weasel.ico": ("帅", BLUE, (255, 255, 255, 255), YAHEI_BOLD),
-    "zh.ico":     ("帅", BLUE, (255, 255, 255, 255), YAHEI_BOLD),
+    # zh.ico 是任务栏"中文模式"指示图标，必须与本体图标（帅）区分，用"中"字
+    "zh.ico":     ("中", BLUE, (255, 255, 255, 255), YAHEI_BOLD),
     "en.ico":     ("A",  SLATE, (255, 255, 255, 255), YAHEI_BOLD),
     "full.ico":   ("全", BLUE, (255, 255, 255, 255), YAHEI_BOLD),
     "half.ico":   ("半", SLATE, (255, 255, 255, 255), YAHEI_BOLD),

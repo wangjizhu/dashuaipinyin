@@ -42,7 +42,8 @@ function Invoke-DevCmd($workDir, $command) {
             "set VSCMD_START_DIR=none && " +
             "call `"$VsDevCmd`" -arch=amd64 -no_logo && " +
             "cd /d `"$workDir`" && $command"
-    cmd /c $line
+    # cmd 输出必须流向控制台而非函数返回值，否则 $ret 被 stdout 污染成数组
+    cmd /c $line | Out-Host
     return $LASTEXITCODE
 }
 
