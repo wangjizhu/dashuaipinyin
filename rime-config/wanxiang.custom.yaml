@@ -26,6 +26,12 @@ patch:
     - script_translator@add_user_dict
     - script_translator@user_dict_set
 
+  # 混输词库禁用前缀补全（搜狗式策略：打多少匹配多少，联想不抢首位）。
+  # mixed.dict.yaml 自带"我的ip"等中英混合词条，开补全时只打 wode 就会
+  # 冒出"我的ip"且权重压过精确匹配的"我的"，一旦误选还会被调频置顶。
+  # 关补全后打全 wodeip 才出现（精确匹配），中文输入不再被混输词偷袭。
+  wanxiang_mixedcode/enable_completion: false
+
   # 替换方案级快捷键：去掉易误触且状态会被记住的模式切换键——
   #   Shift+space 切换方案（单方案下纯陷阱）
   #   Ctrl+Shift+3/4 切中英标点/简繁（全局生效 + 状态持久化，误触后极难自查）
