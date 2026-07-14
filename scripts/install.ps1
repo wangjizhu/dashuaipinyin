@@ -118,12 +118,17 @@ New-Item -ItemType Directory -Force $RimeUser | Out-Null
 Expand-Archive -Path $WanxiangZip -DestinationPath $RimeUser -Force
 # 语言模型放用户目录根
 Copy-Item $GramFile (Join-Path $RimeUser 'wanxiang-lts-zh-hans.gram') -Force
-# 应用本仓库的覆盖配置（*.custom.yaml，如有）
+# 应用本仓库的覆盖配置（*.custom.yaml + lua 扩展）
 $overlay = Join-Path $RepoRoot 'rime-config'
 if (Test-Path $overlay) {
-    Get-ChildItem $overlay -Filter *.yaml -ErrorAction SilentlyContinue | ForEach-Object {
+    Get-ChildItem $overlay -Filter *.yaml -File -ErrorAction SilentlyContinue | ForEach-Object {
         Copy-Item $_.FullName $RimeUser -Force
         Write-Host "    覆盖配置: $($_.Name)"
+    }
+    if (Test-Path "$overlay\lua") {
+        New-Item -ItemType Directory -Force "$RimeUser\lua" | Out-Null
+        Copy-Item "$overlay\lua\*" "$RimeUser\lua\" -Recurse -Force
+        Write-Host "    覆盖配置: lua\ 扩展脚本"
     }
 }
 

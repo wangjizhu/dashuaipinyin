@@ -1,0 +1,6 @@
+# 大帅拼音发行版定制补丁（叠加在万象 base 方案之上）
+patch:
+  # 最长音节切分优先：连打默认整音节（wang da shuai），用 ' 分隔符才拆（wang'da'shu'ai）
+  # 实现见 lua/dashuai_greedy.lua
+  engine/filters/+:
+    - lua_filter@*dashuai_greedy
