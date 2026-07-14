@@ -643,7 +643,7 @@ index 54f840f..c630e03 100755
  }
  
 diff --git a/output/install.nsi b/output/install.nsi
-index 3d5130c..32e999a 100644
+index 3d5130c..629becd 100644
 --- a/output/install.nsi
 +++ b/output/install.nsi
 @@ -22,17 +22,17 @@ Unicode true
@@ -731,6 +731,76 @@ index 3d5130c..32e999a 100644
  LangString SYSTEMVERSIONNOTOK ${LANG_SIMPCHINESE} "您的系統不被支持，最低系统要求:Windows 8.1!"
  LangString AUTOCHKUPDATE ${LANG_SIMPCHINESE} "自动检查版本更新？"
  
+@@ -293,6 +293,15 @@ program_files:
+   File "data\*.yaml"
+   File /nonfatal "data\*.txt"
+   File /nonfatal "data\*.gram"
++  ; 万象词库源（首次部署时由 librime 编译）
++  SetOutPath $INSTDIR\data\dicts
++  File /nonfatal "data\dicts\*.yaml"
++  ; 万象 lua 扩展（含 data 子目录）
++  SetOutPath $INSTDIR\data\lua
++  File /nonfatal /r "data\lua\*.*"
++  ; 预编译词库（免首次部署编译等待；校验不符时 librime 自动重编）
++  SetOutPath $INSTDIR\data\build
++  File /nonfatal "data\build\*.*"
+   ; opencc data files
+   SetOutPath $INSTDIR\data\opencc
+   File "data\opencc\*.json"
+@@ -321,13 +330,17 @@ program_files:
+   WriteRegStr HKLM "${REG_UNINST_KEY}" "DisplayIcon" '"$INSTDIR\WeaselServer.exe"'
+   WriteRegStr HKLM "${REG_UNINST_KEY}" "DisplayVersion" "${WEASEL_VERSION}.${WEASEL_BUILD}"
+   WriteRegStr HKLM "${REG_UNINST_KEY}" "UninstallString" '"$INSTDIR\uninstall.exe"'
+-  WriteRegStr HKLM "${REG_UNINST_KEY}" "Publisher" "式恕堂"
+-  WriteRegStr HKLM "${REG_UNINST_KEY}" "URLInfoAbout" "https://rime.im/"
+-  WriteRegStr HKLM "${REG_UNINST_KEY}" "HelpLink" "https://rime.im/docs/"
++  WriteRegStr HKLM "${REG_UNINST_KEY}" "Publisher" "大帅拼音（基于中州韻 RIME · 小狼毫）"
++  WriteRegStr HKLM "${REG_UNINST_KEY}" "URLInfoAbout" "http://10.5.10.201:8888/dashuai/dashuaipinyin"
++  WriteRegStr HKLM "${REG_UNINST_KEY}" "HelpLink" "http://10.5.10.201:8888/dashuai/dashuaipinyin"
+   WriteRegDWORD HKLM "${REG_UNINST_KEY}" "NoModify" 1
+   WriteRegDWORD HKLM "${REG_UNINST_KEY}" "NoRepair" 1
+   WriteUninstaller "$INSTDIR\uninstall.exe"
+ 
++  ; 万象 lua 模块需要用户目录先有 lua 子目录才能创建 userdb（LevelDB 不建父目录）
++  SetShellVarContext current
++  CreateDirectory "$APPDATA\Rime\lua"
++
+   ; run as user...
+   IfSilent deploy_silently
+   ExecWait "$INSTDIR\WeaselDeployer.exe /install"
+@@ -348,15 +361,8 @@ program_files:
+   ; Start WeaselServer
+   Exec "$INSTDIR\WeaselServer.exe"
+ 
+-  ; option CheckForUpdates
+-  IfSilent DisableAutoCheckUpdate
+-  MessageBox MB_YESNO|MB_ICONINFORMATION "$(AUTOCHKUPDATE)" IDYES EnableAutoCheckUpdate
+-  DisableAutoCheckUpdate:
++  ; 大帅拼音：绿色纯净零联网，永久关闭自动检查更新（不弹询问框）
+   WriteRegStr HKCU "Software\Rime\Weasel\Updates" "CheckForUpdates" "0"
+-  GoTo end
+-  EnableAutoCheckUpdate:
+-  WriteRegStr HKCU "Software\Rime\Weasel\Updates" "CheckForUpdates" "1"
+-  end:
+ 
+   ; Prompt reboot
+   StrCmp $0 "Upgrade" 0 +2
+@@ -407,10 +413,15 @@ Section "Uninstall"
+   SetOutPath $TEMP
+   Delete  "$INSTDIR\data\opencc\*.*"
+   Delete  "$INSTDIR\data\preview\*.*"
++  Delete  "$INSTDIR\data\dicts\*.*"
++  Delete  "$INSTDIR\data\build\*.*"
++  RMDir /r "$INSTDIR\data\lua"
+   Delete  "$INSTDIR\data\*.*"
+   Delete  "$INSTDIR\*.*"
+   RMDir  "$INSTDIR\data\opencc"
+   RMDir  "$INSTDIR\data\preview"
++  RMDir  "$INSTDIR\data\dicts"
++  RMDir  "$INSTDIR\data\build"
+   RMDir  "$INSTDIR\data"
+   RMDir  "$INSTDIR"
+   SetShellVarContext all
 diff --git a/resource/en.ico b/resource/en.ico
 index da042a60675afc8f8928543ac0c6ea7064d06bec..0ee2b381bd07eb2750be91cf7b1a400de34c3b59 100644
 GIT binary patch
