@@ -1,0 +1,32 @@
+#include <winver.h>
+
+// 图标资源索引 0：语言栏 / 输入法列表显示"帅"字图标
+1 ICON "dashuai.ico"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 0,1,0,0
+ PRODUCTVERSION 0,1,0,0
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS 0x40004L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "080404b0"
+        BEGIN
+            VALUE "CompanyName", "\x5927\x5e05\x62fc\x97f3"
+            VALUE "FileDescription", "\x5927\x5e05\x62fc\x97f3\xb7\x6781\x7b80 TSF"
+            VALUE "FileVersion", "0.1.0.0"
+            VALUE "InternalName", "DashuaiMini"
+            VALUE "OriginalFilename", "DashuaiMini.dll"
+            VALUE "ProductName", "\x5927\x5e05\x62fc\x97f3\xb7\x6781\x7b80"
+            VALUE "ProductVersion", "0.1.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x804, 1200
+    END
+END
