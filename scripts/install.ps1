@@ -60,7 +60,10 @@ foreach ($f in @($WeaselExe, $WanxiangZip, $GramFile)) {
 
 # ---------- 2. 静默安装小狼毫 ----------
 Step "安装小狼毫 Weasel $WeaselVersion（静默）"
-$p = Start-Process -FilePath $WeaselExe -ArgumentList '/S' -Wait -PassThru
+# 注意：不能用 Start-Process -Wait —— PS 5.1 会连同子进程一起等，
+# 而 NSIS 安装器结尾会拉起常驻的 WeaselServer，导致永久挂起。
+$p = Start-Process -FilePath $WeaselExe -ArgumentList '/S' -PassThru
+$p.WaitForExit()
 if ($p.ExitCode -ne 0) { throw "Weasel 安装程序退出码: $($p.ExitCode)" }
 
 # 定位安装目录（注册表优先，目录扫描兜底）
@@ -108,7 +111,8 @@ if (Test-Path $overlay) {
 # ---------- 4. 重新部署（编译词库） ----------
 Step '编译词库与语言模型（首次约 1-3 分钟）'
 $deployer = Join-Path $weaselRoot 'WeaselDeployer.exe'
-$p = Start-Process -FilePath $deployer -ArgumentList '/deploy' -Wait -PassThru
+$p = Start-Process -FilePath $deployer -ArgumentList '/deploy' -PassThru
+$p.WaitForExit()
 Write-Host "    部署器退出码: $($p.ExitCode)"
 
 # 验证编译产物
