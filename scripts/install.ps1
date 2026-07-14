@@ -82,6 +82,22 @@ if (-not $weaselRoot) {
 if (-not $weaselRoot -or -not (Test-Path $weaselRoot)) { throw '未找到小狼毫安装目录' }
 Write-Host "    安装目录: $weaselRoot"
 
+# ---------- 2.5 品牌化：语言栏显示名改为"大帅拼音" ----------
+# TSF 输入法在语言栏/输入法切换列表的名字来自注册表 LanguageProfile 的 Description。
+# 每次重装 weasel 都会注册回"小狼毫"，所以此步骤必须在安装之后执行。
+Step '设置显示名称：大帅拼音'
+$tipGuid = '{A3F4CDED-B1E9-41EE-9CA6-7B4D0DE6CB0A}'
+foreach ($ctfRoot in @("HKLM:\SOFTWARE\Microsoft\CTF\TIP\$tipGuid\LanguageProfile",
+                       "HKLM:\SOFTWARE\WOW6432Node\Microsoft\CTF\TIP\$tipGuid\LanguageProfile")) {
+    if (-not (Test-Path $ctfRoot)) { continue }
+    Get-ChildItem $ctfRoot | ForEach-Object {
+        Get-ChildItem $_.PSPath | ForEach-Object {
+            Set-ItemProperty -Path $_.PSPath -Name Description -Value '大帅拼音'
+        }
+    }
+}
+Write-Host '    显示名已设为“大帅拼音”（注销重新登录后全面生效）'
+
 # ---------- 3. 部署万象方案文件 ----------
 Step '部署万象拼音方案与语言模型'
 
