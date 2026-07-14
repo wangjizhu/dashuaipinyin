@@ -3,3 +3,8 @@ dist/
 
 # weasel 源码构建目录（由 scripts/build-dashuai.ps1 重建）
 src/
+
+*.obj
+*.res
+src-mini/*.lib
+src-mini/*.exp
