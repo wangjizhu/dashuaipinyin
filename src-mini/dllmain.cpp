@@ -106,7 +106,8 @@ STDAPI DllRegisterServer() {
       hr = profileMgr->RegisterProfile(
           CLSID_DashuaiMini, MINI_LANGID, GUID_MiniProfile, MINI_DESC,
           (ULONG)wcslen(MINI_DESC), path.c_str(), (ULONG)path.size(),
-          (ULONG)-1 /* 图标资源索引 0 → -(0)-1 */, nullptr, 0, TRUE, 0);
+          0 /* 零基图标索引：DLL 首个图标 = 帅字（与 weasel 同约定） */,
+          nullptr, 0, TRUE, 0);
       profileMgr->Release();
     }
     if (SUCCEEDED(hr)) {
