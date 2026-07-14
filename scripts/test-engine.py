@@ -4,8 +4,9 @@ import ctypes, os, sys, io
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
-WEASEL = r"C:\Program Files\Rime\weasel-0.17.4"
-USER_DIR = os.path.join(os.environ["APPDATA"], "Rime")
+# 可用环境变量覆盖，便于在隔离的暂存目录里验证配置而不动线上
+WEASEL = os.environ.get("DASHUAI_WEASEL", r"C:\Program Files\Rime\weasel-0.17.4")
+USER_DIR = os.environ.get("DASHUAI_USER_DIR", os.path.join(os.environ["APPDATA"], "Rime"))
 LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rime-test-logs")
 os.makedirs(LOG_DIR, exist_ok=True)
 os.environ["GLOG_logbufsecs"] = "0"
@@ -94,7 +95,10 @@ traits.log_dir = LOG_DIR.encode("utf-8")
 
 rime.RimeSetup(ctypes.byref(traits))
 rime.RimeInitialize(ctypes.byref(traits))
-# no maintenance needed: workspace already deployed
+# 线上目录已部署过无需维护；暂存目录验证时设 DASHUAI_MAINTENANCE=1 触发编译
+if os.environ.get("DASHUAI_MAINTENANCE") == "1":
+    if rime.RimeStartMaintenance(1):
+        rime.RimeJoinMaintenanceThread()
 
 sid = rime.RimeCreateSession()
 print(f"session: {sid}")

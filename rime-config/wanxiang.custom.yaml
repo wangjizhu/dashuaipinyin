@@ -1,6 +1,48 @@
 # 大帅拼音发行版定制补丁（叠加在万象 base 方案之上）
+# 原则：只有一个版本，主力版本身足够极简——隐藏功能保留（不打扰即无成本），
+#       砍掉一切会"偷袭"普通用户的误触陷阱。
 patch:
   # 最长音节切分优先：连打默认整音节（wang da shuai），用 ' 分隔符才拆（wang'da'shu'ai）
   # 实现见 lua/dashuai_greedy.lua
   engine/filters/+:
     - lua_filter@*dashuai_greedy
+
+  # 替换 translators：去掉 set_schema（输入 /zrm、/flypy 等会永久切换成双拼方案，
+  # 普通用户误触发后会"突然打不出字"；要换方案应改配置文件）。其余照抄 base。
+  engine/translators:
+    - punct_translator
+    - script_translator
+    - lua_translator@*wanxiang.user_predict*T
+    - lua_translator@*wanxiang.version_display
+    - lua_translator@*wanxiang.shijian
+    - lua_translator@*wanxiang.unicode
+    - lua_translator@*wanxiang.number_translator
+    - lua_translator@*wanxiang.super_calculator
+    - lua_translator@*wanxiang.input_statistics
+    - table_translator@custom_phrase
+    - table_translator@wanxiang_english
+    - table_translator@wanxiang_mixedcode
+    - reverse_lookup_translator@wanxiang_reverse
+    - script_translator@add_user_dict
+    - script_translator@user_dict_set
+
+  # 替换方案级快捷键：去掉易误触且状态会被记住的模式切换键——
+  #   Shift+space 切换方案（单方案下纯陷阱）
+  #   Ctrl+Shift+3/4 切中英标点/简繁（全局生效 + 状态持久化，误触后极难自查）
+  #   Ctrl+e/a/s/t/g 各种显示模式（撞全选/保存等肌肉记忆）
+  # 这些开关仍可通过状态面板（Ctrl+`）调整。default.yaml 的通用键位经
+  # import_preset 继续生效（- = 翻页、小键盘映射等）。
+  key_binder/bindings:
+    - {when: has_menu, accept: minus, send: Page_Up}
+    - {when: has_menu, accept: equal, send: Page_Down}
+    - {when: composing, accept: Alt+Left, send: Shift+Left}
+    - {when: composing, accept: Alt+Right, send: Shift+Right}
+    - {when: composing, accept: Control+w, send: Control+BackSpace}
+    - {when: has_menu, accept: "Tab", send: "Control+Right"}
+    - {when: composing, accept: "Tab", send: "Control+Right"}
+    - {when: composing, accept: "Control+Tab", send_sequence: '{Home}{Shift+Right}{1}{Shift+Right}'}
+    - {match: "^/$", accept: "/", send_sequence: '{space}'}
+    - {match: "^›+$", accept: "backslash", send_sequence: '{Clear}{backslash}'}
+    - {match: "^›+$", accept: "comma", send_sequence: '{Clear}{comma}'}
+    - {match: "^›+$", accept: "period", send_sequence: '{Clear}{period}'}
+    - {match: "^›+$", accept: "Return", send_sequence: '{Clear}{Return}'}
