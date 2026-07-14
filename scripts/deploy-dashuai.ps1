@@ -67,6 +67,34 @@ Get-ChildItem "$weaselRoot\*.old.*" -ErrorAction SilentlyContinue | ForEach-Obje
     try { Remove-Item $_.FullName -Force -Confirm:$false } catch {}
 }
 
+# ---------- 2.5 同步系统目录 TSF DLL（关键！） ----------
+# 应用实际加载的是 WeaselSetup 装进 System32/SysWOW64 的 weasel.dll，
+# 只替换安装目录等于没部署 TSF 客户端。直接复制（被占用用改名法），
+# 不调 WeaselSetup /s——它会拉起进程树，Start-Process -Wait 会死等。
+Step '同步 System32/SysWOW64 TSF DLL'
+$sysPairs = @(
+    @{ src = Join-Path $OutDir 'weaselx64.dll'; dst = "$env:WINDIR\System32\weasel.dll" },
+    @{ src = Join-Path $OutDir 'weasel.dll';    dst = "$env:WINDIR\SysWOW64\weasel.dll" }
+)
+foreach ($pair in $sysPairs) {
+    if ((Test-Path $pair.dst) -and
+        (Get-FileHash $pair.src).Hash -eq (Get-FileHash $pair.dst).Hash) {
+        Write-Host "    已最新: $($pair.dst)"; continue
+    }
+    try {
+        Copy-Item $pair.src $pair.dst -Force
+    } catch {
+        Rename-Item $pair.dst "$($pair.dst).old.$stamp" -Force
+        Copy-Item $pair.src $pair.dst -Force
+    }
+    Write-Host "    已更新: $($pair.dst)"
+}
+foreach ($sysdir in "$env:WINDIR\System32", "$env:WINDIR\SysWOW64") {
+    Get-ChildItem "$sysdir\weasel*.old.*" -ErrorAction SilentlyContinue | ForEach-Object {
+        try { Remove-Item $_.FullName -Force -Confirm:$false } catch {}
+    }
+}
+
 # ---------- 3. 显示名兜底 ----------
 Step '确认语言栏显示名'
 $tipGuid = '{A3F4CDED-B1E9-41EE-9CA6-7B4D0DE6CB0A}'
