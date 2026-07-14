@@ -25,9 +25,18 @@ RimeEngine& RimeEngine::Instance() {
 
 typedef RimeApi* (*get_api_fn)();
 
+static bool GetFileStamp(const std::wstring& path, FILETIME* ft) {
+  WIN32_FILE_ATTRIBUTE_DATA fad;
+  if (!GetFileAttributesExW(path.c_str(), GetFileExInfoStandard, &fad))
+    return false;
+  *ft = fad.ftLastWriteTime;
+  return true;
+}
+
 bool RimeEngine::EnsureInit(HINSTANCE dllModule) {
   if (initialized_) return true;
   if (initFailed_) return false;
+  dllModule_ = dllModule;
 
   // rime.dll 与本 DLL 同目录
   wchar_t path[MAX_PATH];
@@ -73,7 +82,28 @@ bool RimeEngine::EnsureInit(HINSTANCE dllModule) {
   session_ = api->create_session();
   if (!session_) { initFailed_ = true; return false; }
   initialized_ = true;
+  // 记录 build 产物时间戳，用于配置热重载检测
+  buildMarker_ = userDir + L"\\build\\wanxiang.schema.yaml";
+  GetFileStamp(buildMarker_, &buildStamp_);
   return true;
+}
+
+void RimeEngine::MaybeReload() {
+  if (!initialized_) return;
+  unsigned long long now = GetTickCount64();
+  if (now - lastReloadCheck_ < 3000) return;  // 3 秒节流
+  lastReloadCheck_ = now;
+  FILETIME ft;
+  if (!GetFileStamp(buildMarker_, &ft)) return;
+  if (CompareFileTime(&ft, &buildStamp_) == 0) return;
+  // 词库/配置已重新部署 → 热重载引擎（一次性开销约 1-2 秒）
+  RimeApi* api = (RimeApi*)api_;
+  if (session_) api->destroy_session(session_);
+  api->finalize();
+  session_ = 0;
+  initialized_ = false;
+  initFailed_ = false;
+  EnsureInit(dllModule_);
 }
 
 void RimeEngine::Finalize() {

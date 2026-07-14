@@ -25,6 +25,8 @@ class RimeEngine {
 
   bool EnsureInit(HINSTANCE dllModule);
   void Finalize();
+  // 配置热重载：检测 build 产物更新则重建引擎（3 秒节流，仅在非组合状态调用）
+  void MaybeReload();
 
   // 返回 true = 按键被引擎消费；state 为处理后的最新状态
   bool ProcessKey(int keysym, int mask, MiniState& state);
@@ -44,6 +46,10 @@ class RimeEngine {
   uintptr_t session_ = 0;
   bool initialized_ = false;
   bool initFailed_ = false;
+  HINSTANCE dllModule_ = nullptr;
+  std::wstring buildMarker_;          // build\wanxiang.schema.yaml 路径
+  FILETIME buildStamp_ = {};          // 初始化时的产物时间戳
+  unsigned long long lastReloadCheck_ = 0;
 };
 
 // VK + 修饰键 → X11 keysym（librime 的按键编码）；返回 0 = 不转发

@@ -382,6 +382,7 @@ bool CTextService::WantKey(WPARAM wp, bool composing) {
   if (GetKeyState(VK_MENU) & 0x8000) return false;
   auto& engine = RimeEngine::Instance();
   if (!engine.EnsureInit(g_hInst)) return false;
+  if (!composing) engine.MaybeReload();  // 组合开始前检查配置热重载
   if (engine.GetAsciiMode()) return false;
   if (wp >= 'A' && wp <= 'Z') return true;
   if (!composing) return false;
