@@ -1,5 +1,5 @@
 # 下载的安装件（体积大，由 install.ps1 按固定 URL 重新获取）
 dist/
 
-# weasel Դ�빹��Ŀ¼���� scripts/build-dashuai.ps1 �ؽ���
+# weasel 源码构建目录（由 scripts/build-dashuai.ps1 重建）
 src/
