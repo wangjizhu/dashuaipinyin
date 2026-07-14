@@ -10,7 +10,8 @@ extern LONG g_dllRefCount;
 class CTextService : public ITfTextInputProcessor,
                      public ITfKeyEventSink,
                      public ITfCompositionSink,
-                     public ITfDisplayAttributeProvider {
+                     public ITfDisplayAttributeProvider,
+                     public ITfCompartmentEventSink {
  public:
   CTextService();
 
@@ -38,6 +39,9 @@ class CTextService : public ITfTextInputProcessor,
   STDMETHODIMP EnumDisplayAttributeInfo(IEnumTfDisplayAttributeInfo** ppEnum) override;
   STDMETHODIMP GetDisplayAttributeInfo(REFGUID guid, ITfDisplayAttributeInfo** ppInfo) override;
 
+  // ITfCompartmentEventSink（任务栏 中/英 点击同步）
+  STDMETHODIMP OnChange(REFGUID rguid) override;
+
   // 内部：供编辑会话调用
   ITfComposition* composition() { return composition_; }
   void set_composition(ITfComposition* c) { composition_ = c; }
@@ -50,11 +54,18 @@ class CTextService : public ITfTextInputProcessor,
  private:
   bool WantKey(WPARAM wp, bool composing);
   void EndCompositionIfAny(ITfContext* pic);
+  // 中/英切换：更新引擎 + 任务栏指示器
+  void SwitchAscii(bool ascii);
+  // 写系统 InputMode Compartment（任务栏 中/英 角标）
+  void SetInputModeCompartment(bool chineseMode);
 
   LONG refCount_;
   ITfThreadMgr* threadMgr_ = nullptr;
   TfClientId clientId_ = TF_CLIENTID_NULL;
   ITfComposition* composition_ = nullptr;
   TfGuidAtom inputAttrAtom_ = TF_INVALID_GUIDATOM;
-  bool shiftPending_ = false;  // Shift 单击切中英
+  bool shiftArmed_ = false;        // Shift 按下且无其他键插入 → 松开时切中英
+  ITfCompartment* inputModeCompartment_ = nullptr;
+  DWORD compartmentSinkCookie_ = 0;
+  bool settingCompartment_ = false;  // 防自触发回环
 };

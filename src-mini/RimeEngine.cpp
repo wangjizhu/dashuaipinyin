@@ -150,11 +150,24 @@ bool RimeEngine::GetAsciiMode() {
   return !!api->get_option(session_, "ascii_mode");
 }
 
+void RimeEngine::SetAsciiMode(bool ascii) {
+  if (!initialized_) return;
+  RimeApi* api = (RimeApi*)api_;
+  api->set_option(session_, "ascii_mode", ascii ? True : False);
+}
+
 void RimeEngine::ToggleAsciiMode() {
   if (!initialized_) return;
   RimeApi* api = (RimeApi*)api_;
   Bool cur = api->get_option(session_, "ascii_mode");
   api->set_option(session_, "ascii_mode", !cur);
+}
+
+std::wstring RimeEngine::GetRawInput() {
+  if (!initialized_) return L"";
+  RimeApi* api = (RimeApi*)api_;
+  const char* input = api->get_input(session_);
+  return Utf8ToW(input);
 }
 
 // ---- VK -> X11 keysym ----

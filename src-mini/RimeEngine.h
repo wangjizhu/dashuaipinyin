@@ -31,7 +31,9 @@ class RimeEngine {
   void ClearComposition(MiniState& state);
   bool IsComposing();
   bool GetAsciiMode();
+  void SetAsciiMode(bool ascii);
   void ToggleAsciiMode();
+  std::wstring GetRawInput();  // 组合中的原始按键串（Shift 上屏用）
 
  private:
   RimeEngine() = default;

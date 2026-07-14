@@ -120,6 +120,7 @@ STDAPI DllRegisterServer() {
             &GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT,
             &GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
             &GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER,
+            &GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT_MINI,  // 任务栏 中/英 指示
         };
         for (auto cat : cats) {
           catMgr->RegisterCategory(CLSID_DashuaiMini, *cat, CLSID_DashuaiMini);
@@ -151,6 +152,7 @@ STDAPI DllUnregisterServer() {
           &GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT,
           &GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT,
           &GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER,
+          &GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT_MINI,
       };
       for (auto cat : cats) {
         catMgr->UnregisterCategory(CLSID_DashuaiMini, *cat, CLSID_DashuaiMini);

@@ -281,6 +281,8 @@ STDMETHODIMP CTextService::QueryInterface(REFIID riid, void** ppv) {
     *ppv = (ITfCompositionSink*)this;
   else if (IsEqualIID(riid, IID_ITfDisplayAttributeProvider))
     *ppv = (ITfDisplayAttributeProvider*)this;
+  else if (IsEqualIID(riid, IID_ITfCompartmentEventSink))
+    *ppv = (ITfCompartmentEventSink*)this;
   if (*ppv) {
     AddRef();
     return S_OK;
@@ -317,12 +319,42 @@ STDMETHODIMP CTextService::Activate(ITfThreadMgr* ptim, TfClientId tid) {
     keyMgr->Release();
   }
 
+  // 输入模式 Compartment：任务栏 中/英 指示 + 鼠标点击切换
+  ITfCompartmentMgr* compMgr = nullptr;
+  if (SUCCEEDED(threadMgr_->QueryInterface(IID_ITfCompartmentMgr, (void**)&compMgr))) {
+    if (SUCCEEDED(compMgr->GetCompartment(
+            GUID_COMPARTMENT_KEYBOARD_INPUTMODE_CONVERSION_MINI,
+            &inputModeCompartment_))) {
+      ITfSource* src = nullptr;
+      if (SUCCEEDED(inputModeCompartment_->QueryInterface(IID_ITfSource, (void**)&src))) {
+        src->AdviseSink(IID_ITfCompartmentEventSink, (ITfCompartmentEventSink*)this,
+                        &compartmentSinkCookie_);
+        src->Release();
+      }
+    }
+    compMgr->Release();
+  }
+
   RimeEngine::Instance().EnsureInit(g_hInst);
+  // 初始状态：中文
+  SetInputModeCompartment(!RimeEngine::Instance().GetAsciiMode());
   return S_OK;
 }
 
 STDMETHODIMP CTextService::Deactivate() {
   CandidateWindow::Instance().Hide();
+  if (inputModeCompartment_) {
+    if (compartmentSinkCookie_) {
+      ITfSource* src = nullptr;
+      if (SUCCEEDED(inputModeCompartment_->QueryInterface(IID_ITfSource, (void**)&src))) {
+        src->UnadviseSink(compartmentSinkCookie_);
+        src->Release();
+      }
+      compartmentSinkCookie_ = 0;
+    }
+    inputModeCompartment_->Release();
+    inputModeCompartment_ = nullptr;
+  }
   if (threadMgr_) {
     ITfKeystrokeMgr* keyMgr = nullptr;
     if (SUCCEEDED(threadMgr_->QueryInterface(IID_ITfKeystrokeMgr, (void**)&keyMgr))) {
@@ -366,13 +398,38 @@ bool CTextService::WantKey(WPARAM wp, bool composing) {
   return false;
 }
 
+// 注意：TSF 只对"测试阶段声明吃掉"的键调用 OnKeyDown/OnKeyUp，
+// 因此 Shift 单击切换必须在 OnTestKeyDown/OnTestKeyUp 中跟踪。
 STDMETHODIMP CTextService::OnTestKeyDown(ITfContext* pic, WPARAM wp, LPARAM lp, BOOL* pfEaten) {
+  if (wp == VK_SHIFT) {
+    bool mod = (GetKeyState(VK_CONTROL) & 0x8000) || (GetKeyState(VK_MENU) & 0x8000);
+    if (!mod) shiftArmed_ = true;  // 候选切换，松开时生效
+    *pfEaten = FALSE;
+    return S_OK;
+  }
+  shiftArmed_ = false;  // Shift+其他键 = 组合键，不触发切换
   *pfEaten = WantKey(wp, RimeEngine::Instance().IsComposing()) ? TRUE : FALSE;
   return S_OK;
 }
 
 STDMETHODIMP CTextService::OnTestKeyUp(ITfContext* pic, WPARAM wp, LPARAM lp, BOOL* pfEaten) {
   *pfEaten = FALSE;
+  if (wp == VK_SHIFT && shiftArmed_) {
+    shiftArmed_ = false;
+    auto& engine = RimeEngine::Instance();
+    if (!engine.EnsureInit(g_hInst)) return S_OK;
+    bool toAscii = !engine.GetAsciiMode();
+    // 组合中按 Shift：已打的字母原样上屏（同搜狗习惯），再切英文
+    if (engine.IsComposing() && pic) {
+      MiniState state;
+      state.commit = engine.GetRawInput();
+      state.composing = false;
+      MiniState cleared;
+      engine.ClearComposition(cleared);
+      ApplyState(pic, state);
+    }
+    SwitchAscii(toAscii);
+  }
   return S_OK;
 }
 
@@ -381,22 +438,21 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wp, LPARAM lp, BOOL
   auto& engine = RimeEngine::Instance();
   bool composing = engine.IsComposing();
 
-  // Shift 单击切中英：按下 Shift 且无其他键 → 候选切换在 KeyUp 执行
-  if (wp == VK_SHIFT) {
-    shiftPending_ = !composing;
-    return S_OK;
-  }
-  shiftPending_ = false;
-
   if (!WantKey(wp, composing)) return S_OK;
 
   bool shift = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
+  bool ctrl = (GetKeyState(VK_CONTROL) & 0x8000) != 0;
   bool capital = (GetKeyState(VK_CAPITAL) & 1) != 0;
   int keysym = VkToRimeKeysym(wp, shift, capital);
   if (!keysym) return S_OK;
 
+  int mask = 0;
+  if (shift) mask |= (1 << 0);    // kShiftMask
+  if (capital) mask |= (1 << 1);  // kLockMask
+  if (ctrl) mask |= (1 << 2);     // kControlMask
+
   MiniState state;
-  bool handled = engine.ProcessKey(keysym, 0, state);
+  bool handled = engine.ProcessKey(keysym, mask, state);
   if (!handled && !composing) return S_OK;  // 引擎不要，放行
 
   *pfEaten = TRUE;
@@ -406,10 +462,6 @@ STDMETHODIMP CTextService::OnKeyDown(ITfContext* pic, WPARAM wp, LPARAM lp, BOOL
 
 STDMETHODIMP CTextService::OnKeyUp(ITfContext* pic, WPARAM wp, LPARAM lp, BOOL* pfEaten) {
   *pfEaten = FALSE;
-  if (wp == VK_SHIFT && shiftPending_) {
-    shiftPending_ = false;
-    RimeEngine::Instance().ToggleAsciiMode();
-  }
   return S_OK;
 }
 
@@ -449,6 +501,37 @@ void CTextService::ApplyState(ITfContext* pic, const MiniState& state) {
   HRESULT hr = S_OK;
   pic->RequestEditSession(clientId_, session, TF_ES_SYNC | TF_ES_READWRITE, &hr);
   session->Release();
+}
+
+void CTextService::SwitchAscii(bool ascii) {
+  RimeEngine::Instance().SetAsciiMode(ascii);
+  SetInputModeCompartment(!ascii);
+}
+
+void CTextService::SetInputModeCompartment(bool chineseMode) {
+  if (!inputModeCompartment_) return;
+  settingCompartment_ = true;
+  VARIANT var;
+  var.vt = VT_I4;
+  var.lVal = chineseMode ? MINI_CONVERSIONMODE_NATIVE
+                         : MINI_CONVERSIONMODE_ALPHANUMERIC;
+  inputModeCompartment_->SetValue(clientId_, &var);
+  settingCompartment_ = false;
+}
+
+// 任务栏 中/英 角标被鼠标点击（或系统改变输入模式）→ 同步引擎
+STDMETHODIMP CTextService::OnChange(REFGUID rguid) {
+  if (settingCompartment_) return S_OK;
+  if (!IsEqualGUID(rguid, GUID_COMPARTMENT_KEYBOARD_INPUTMODE_CONVERSION_MINI))
+    return S_OK;
+  if (!inputModeCompartment_) return S_OK;
+  VARIANT var;
+  VariantInit(&var);
+  if (SUCCEEDED(inputModeCompartment_->GetValue(&var)) && var.vt == VT_I4) {
+    bool chineseMode = (var.lVal & MINI_CONVERSIONMODE_NATIVE) != 0;
+    RimeEngine::Instance().SetAsciiMode(!chineseMode);
+  }
+  return S_OK;
 }
 
 void CTextService::EndCompositionIfAny(ITfContext* pic) {
