@@ -36,8 +36,8 @@
 **方式一（推荐）：完整安装包**
 
 到本仓库的 [Releases 页面](https://github.com/wangjizhu/dashuaipinyin/releases)
-下载最新的 `dashuai-pinyin-*-installer.exe`，双击安装（词库与语言模型已全部内置，
-安装全程无须联网）。装完按 **Win + 空格** 切换到【大帅拼音】即可打字。
+下载最新的 `dashuai-pinyin-<版本>-windows-x64-setup.exe`，双击安装（词库与语言模型
+已全部内置，安装全程无须联网）。装完按 **Win + 空格** 切换到【大帅拼音】即可打字。
 
 **方式二：脚本安装（自动下载各开源组件后组装）**
 
@@ -59,16 +59,16 @@ Set-ExecutionPolicy -Scope Process Bypass -Force
 
 ```bash
 # 从 Releases 页面下载安装脚本后运行（会自动 apt 安装前端并下载数据包）
-wget https://github.com/wangjizhu/dashuaipinyin/releases/download/v0.17.4.1/install-ubuntu.sh
-bash install-ubuntu.sh            # ibus 前端（默认）
-bash install-ubuntu.sh fcitx5     # 或改用 fcitx5 前端
+wget https://github.com/wangjizhu/dashuaipinyin/releases/download/v0.17.4.1/dashuai-pinyin-0.17.4.1-ubuntu-install.sh
+bash dashuai-pinyin-0.17.4.1-ubuntu-install.sh            # ibus 前端（默认）
+bash dashuai-pinyin-0.17.4.1-ubuntu-install.sh fcitx5     # 或改用 fcitx5 前端
 
 # 离线安装：先下载数据包，作为第二个参数传入
-bash install-ubuntu.sh ibus dashuai-pinyin-0.17.4.1-rime-data.tar.gz
+bash dashuai-pinyin-0.17.4.1-ubuntu-install.sh ibus dashuai-pinyin-0.17.4.1-ubuntu-rime-data.tar.gz
 ```
 
-装完注销重新登录，到 设置 → 键盘 → 输入源 添加「中文 (Rime)」，
-Super + 空格切换即可打字（输入法列表显示名为 Rime，内核即大帅拼音）。
+装完注销重新登录，到 设置 → 键盘 → 输入源 添加「中文（大帅拼音）」，
+Super + 空格切换即可打字，顶栏指示图标为「帅」。
 
 > 说明：Ubuntu 22.04 及更早版本的系统 librime（1.7.3）过旧、无法运行万象方案，
 > 安装脚本会明确拒绝并提示，请使用 Ubuntu 24.04+。

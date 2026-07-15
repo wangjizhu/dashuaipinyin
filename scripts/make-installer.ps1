@@ -77,7 +77,8 @@ Step 'makensis 打包（负载约 630MB，压缩需数分钟）'
     /DPRODUCT_VERSION=$PRODUCT_VERSION (Join-Path $WeaselSrc 'output\install.nsi') | Out-Host
 if ($LASTEXITCODE -ne 0) { throw "makensis 失败 ($LASTEXITCODE)" }
 
-# ---------- 6. 收集 ----------
+# ---------- 6. 收集（统一发布命名：平台标识入文件名） ----------
 $exe = Join-Path $WeaselSrc "output\archives\dashuai-pinyin-$PRODUCT_VERSION-installer.exe"
-Copy-Item $exe $OutDir -Force
-Step ("完成: build-out\dashuai-pinyin-$PRODUCT_VERSION-installer.exe ({0:N0} MB)" -f ((Get-Item $exe).Length/1MB))
+$released = "dashuai-pinyin-$PRODUCT_VERSION-windows-x64-setup.exe"
+Copy-Item $exe (Join-Path $OutDir $released) -Force
+Step ("完成: build-out\$released ({0:N0} MB)" -f ((Get-Item $exe).Length/1MB))

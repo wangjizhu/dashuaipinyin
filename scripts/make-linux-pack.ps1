@@ -12,7 +12,7 @@ param([string]$Version = '0.17.4.1')
 $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $OutDir   = Join-Path $RepoRoot 'build-out'
-$OutName  = "dashuai-pinyin-$Version-rime-data.tar.gz"
+$OutName  = "dashuai-pinyin-$Version-ubuntu-rime-data.tar.gz"
 
 function Step($msg) { Write-Host "==> $msg" -ForegroundColor Cyan }
 
@@ -29,6 +29,8 @@ cp -r "$SRC"/dicts "$STAGE"/
 mkdir -p "$STAGE/lua"
 (cd "$SRC/lua" && find . -name '*.userdb' -prune -o -type f -print0 | tar --null -T - -cf -) | tar -xf - -C "$STAGE/lua"
 cp "$SRC"/wanxiang-lts-zh-hans.gram "$STAGE"/
+# Linux 品牌图标（安装脚本会装到 /usr/share/dashuai-pinyin/）
+cp /mnt/c/Users/Administrator/Project/shurufa/resources-design/linux/dashuai-pinyin.png "$STAGE"/
 # Linux 适配：wanxiang.super_lookup 在发行版 librime-lua(~2023) 上初始化失败
 # 且每键刷错误日志，从 filters 里移除（其余与 Windows 完全一致）
 python3 - "$STAGE/wanxiang.custom.yaml" <<'PYEOF'

@@ -15,7 +15,7 @@
 set -euo pipefail
 
 VERSION="0.17.4.1"
-DATA_URL="https://github.com/wangjizhu/dashuaipinyin/releases/download/v${VERSION}/dashuai-pinyin-${VERSION}-rime-data.tar.gz"
+DATA_URL="https://github.com/wangjizhu/dashuaipinyin/releases/download/v${VERSION}/dashuai-pinyin-${VERSION}-ubuntu-rime-data.tar.gz"
 
 FRONTEND="${1:-auto}"
 LOCAL_DATA="${2:-}"
@@ -91,22 +91,54 @@ rime_deployer --build "$RIME_DIR" /usr/share/rime-data >/dev/null 2>&1 || \
 [ -f "$RIME_DIR/build/wanxiang.table.bin" ] || {
     echo "错误：词库编译失败（未生成 build/wanxiang.table.bin）" >&2; exit 1; }
 
-# ---------- 5. 收尾提示 ----------
+# ---------- 5. 品牌化：显示名「大帅拼音」+ 图标「帅」 ----------
+say "设置显示名称与图标"
+sudo mkdir -p /usr/share/dashuai-pinyin
+if [ -f "$RIME_DIR/dashuai-pinyin.png" ]; then
+    sudo cp "$RIME_DIR/dashuai-pinyin.png" /usr/share/dashuai-pinyin/dashuai-pinyin.png
+fi
+if [ "$FRONTEND" = ibus ]; then
+    # ibus 引擎注册表：longname=输入源列表显示名，symbol=顶栏指示字符，icon=图标
+    # 注意：ibus-rime 包升级会还原此文件，重跑本脚本即可恢复品牌化
+    RIME_XML=/usr/share/ibus/component/rime.xml
+    if [ -f "$RIME_XML" ]; then
+        sudo sed -i \
+            -e 's|<longname>.*</longname>|<longname>大帅拼音</longname>|' \
+            -e 's|<description>Rime Input Method Engine</description>|<description>大帅拼音输入法</description>|' \
+            -e 's|<icon>.*</icon>|<icon>/usr/share/dashuai-pinyin/dashuai-pinyin.png</icon>|' \
+            -e 's|<symbol>.*</symbol>|<symbol>帅</symbol>|' \
+            "$RIME_XML"
+    fi
+else
+    # fcitx5：用户级 inputmethod 配置覆盖系统默认（无需改系统文件）
+    IM_DIR="$HOME/.local/share/fcitx5/inputmethod"
+    mkdir -p "$IM_DIR"
+    cat > "$IM_DIR/rime.conf" <<'IMEOF'
+[InputMethod]
+Name=大帅拼音
+Icon=/usr/share/dashuai-pinyin/dashuai-pinyin.png
+Label=帅
+LangCode=zh_CN
+Addon=rime
+Configurable=True
+IMEOF
+fi
+
+# ---------- 6. 收尾提示 ----------
 say "安装完成！"
 echo
 if [ "$FRONTEND" = ibus ]; then
     cat <<'EOF'
   启用步骤（GNOME 桌面）：
-    1. 注销并重新登录（让 ibus 加载新引擎）
-    2. 设置 → 键盘 → 输入源 → + → 中文 → 中文 (Rime)
-    3. Super+空格 切换到 Rime 即可打字（显示名为 Rime/中州韵，
-       内核就是大帅拼音：万象词库 + 语言模型 + 全部定制已生效）
+    1. 注销并重新登录（让 ibus 加载新引擎与显示名）
+    2. 设置 → 键盘 → 输入源 → + → 中文 → 中文（大帅拼音）
+    3. Super+空格 切换即可打字，顶栏显示「帅」
 EOF
 else
     cat <<'EOF'
   启用步骤（fcitx5）：
     1. 重启 fcitx5：  fcitx5 -r -d
-    2. fcitx5-configtool → 添加「Rime」到输入法列表
+    2. fcitx5-configtool → 添加「大帅拼音」到输入法列表
     3. Ctrl+空格 切换即可打字
 EOF
 fi

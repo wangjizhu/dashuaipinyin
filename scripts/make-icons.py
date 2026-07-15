@@ -52,6 +52,12 @@ for name, (ch, bg, fg, font_path) in ICONS.items():
     )
     print(f"wrote {ico_path}")
 
+# Linux（ibus/fcitx5）品牌图标：单档 PNG，随 Ubuntu 数据包分发
+png = render(128, "帅", BLUE, (255, 255, 255, 255), YAHEI_BOLD)
+png_path = os.path.join(OUT, "dashuai-pinyin.png")
+png.save(png_path)
+print(f"wrote {png_path}")
+
 # 生成预览拼图：每个图标的 16/32/256 三档
 pad = 12
 cell = 256 + pad * 2
