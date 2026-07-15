@@ -3,6 +3,8 @@
 --       想要短切分请用分隔符（wang'da'shu'ai）。
 -- 机制：在完整覆盖当前输入的候选中，把音节数最少（切分最整）的候选提到最前。
 --       仅当语言模型选了"更碎"的切分时才会触发换位，其余情况零干预。
+-- 只在纯中文候选之间比较：英文/混输候选的 preedit 没有音节空格，
+-- 会被误判成"1 音节"抢到首位（如 buju 首选变 Bujumbura），必须排除。
 
 local function syllable_count(preedit)
   if not preedit or preedit == "" then return nil end
@@ -11,6 +13,10 @@ local function syllable_count(preedit)
     n = n + 1
   end
   return n
+end
+
+local function has_ascii_word(text)
+  return string.find(text or "", "[0-9A-Za-z]") ~= nil
 end
 
 local function emit_all(buffered, best_idx)
@@ -44,8 +50,8 @@ local function filter(input, env)
       yield(cand)
     else
       table.insert(buffered, cand)
-      -- 只比较完整覆盖输入的候选（整句/整词）
-      if (cand._end - cand.start) >= raw_len then
+      -- 只比较完整覆盖输入的纯中文候选（整句/整词）
+      if (cand._end - cand.start) >= raw_len and not has_ascii_word(cand.text) then
         local syl = syllable_count(cand.preedit)
         if syl and (not best_syl or syl < best_syl) then
           best_syl, best_idx = syl, #buffered
