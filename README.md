@@ -33,7 +33,7 @@
 
 **方式一（推荐）：完整安装包**
 
-到本仓库的 [Releases 页面](http://10.5.10.201:8888/dashuai/dashuaipinyin/releases)
+到本仓库的 [Releases 页面](https://github.com/wangjizhu/dashuaipinyin/releases)
 下载最新的 `dashuai-pinyin-*-installer.exe`，双击安装（词库与语言模型已全部内置，
 安装全程无须联网）。装完按 **Win + 空格** 切换到【大帅拼音】即可打字。
 
