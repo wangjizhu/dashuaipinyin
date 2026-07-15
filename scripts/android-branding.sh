@@ -18,9 +18,12 @@ for f in app/src/main/res/values*/strings.xml; do
       "$f"
 done
 
-echo '==> 2. applicationId 与 arm64'
+echo '==> 2. applicationId'
 sed -i 's|applicationId = "com.osfans.trime"|applicationId = "com.dashuai.pinyin"|' app/build.gradle.kts
-grep -q 'abiFilters' app/build.gradle.kts || sed -i '/targetSdk = 35/a\        ndk { abiFilters.add("arm64-v8a") }' app/build.gradle.kts
+# 架构裁剪不改源码：构建时用 Trime 官方环境变量 BUILD_ABI=arm64-v8a
+# （直接加 ndk.abiFilters 会与 Trime 的 splits 配置冲突导致配置期报错）
+# 另需环境变量：BUILD_VERSION_NAME=<版本>（浅克隆无 tag，git describe 会炸）、
+#              CI_NAME=<名字>（构建机未配 git user.name 时 runCmd 会炸）
 
 echo '==> 3. 默认方案：万象'
 python3 - <<'PYEOF'

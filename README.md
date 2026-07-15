@@ -73,21 +73,20 @@ Super + 空格切换即可打字，顶栏指示图标为「帅」。
 > 说明：Ubuntu 22.04 及更早版本的系统 librime（1.7.3）过旧、无法运行万象方案，
 > 安装脚本会明确拒绝并提示，请使用 Ubuntu 24.04+。
 
-### Android（同文输入法 Trime）
+### Android
 
-安卓端通过开源前端 [同文输入法 Trime](https://github.com/osfans/trime)（GPL-3.0，
-内置 librime 引擎与 lua / octagram 语言模型插件）使用，数据与桌面版完全同源：
+下载 Releases 中的 `dashuai-pinyin-<版本>-android-arm64.apk` 直接安装
+（独立完整 App：应用名与图标即「大帅拼音 / 帅」，词库与语言模型全部内置）：
 
-1. 从 [Trime Releases](https://github.com/osfans/trime/releases) 下载最新 APK 安装
-2. 首次打开 Trime，授予存储权限，按向导选择/新建 `rime` 文件夹
-3. 下载本仓库 Releases 中的 `dashuai-pinyin-<版本>-android-rime-data.zip`，
-   全部解压到该 `rime` 文件夹（重名文件全部覆盖）
-4. Trime 首页 → 方案 → 勾选「万象拼音」→ 点击部署
-   （首次部署约 1-2 分钟，键盘无响应属正常，等待「部署成功」提示）
-5. Trime 首页 → 主题 → 选择「简纯+」配套键盘布局，最后在系统设置中启用同文输入法
+1. 安装 APK（需允许"未知来源应用"），打开「大帅拼音」
+2. 按提示授予权限，等待首次自动部署完成（约 1-2 分钟）
+3. 系统设置 → 输入法 中启用「大帅拼音」并切换使用
+4. 建议在 App 主页 → 主题 中选择「简纯+」键盘布局
 
-> 应用名显示为「同文输入法」，输入内核即大帅拼音——整句转换、候选排序、
-> 自定义短语与桌面版行为一致。
+安卓版基于开源前端 [Trime](https://github.com/osfans/trime)（GPL-3.0）构建，
+改造与构建脚本见 `scripts/android-branding.sh`、`scripts/make-android-icons.py`。
+已有原版 Trime 的进阶用户也可只取 `-android-rime-data.zip` 数据包导入，
+整句转换、候选排序、自定义短语与桌面版行为一致。
 
 ## 常用操作
 
