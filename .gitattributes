@@ -1,0 +1,3 @@
+# shell 脚本必须保持 LF：作为 Release 资产被 Linux 用户直接下载执行，
+# CRLF 会导致 bash 报 "\r: command not found"
+*.sh text eol=lf

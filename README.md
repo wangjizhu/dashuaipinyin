@@ -31,6 +31,8 @@
 
 ## 安装
 
+### Windows 10 / 11
+
 **方式一（推荐）：完整安装包**
 
 到本仓库的 [Releases 页面](https://github.com/wangjizhu/dashuaipinyin/releases)
@@ -49,6 +51,27 @@ Set-ExecutionPolicy -Scope Process Bypass -Force
 
 **卸载**：Windows 设置 → 应用 中卸载，或运行 `.\scripts\uninstall.ps1`
 （加 `-PurgeUserData` 连个人词典一起清除）。
+
+### Ubuntu 24.04 及以上
+
+前端使用系统仓库自带的 ibus-rime（GNOME 默认，推荐）或 fcitx5-rime，
+词库、语言模型与全部定制和 Windows 版**完全同源**，输入体验一致。
+
+```bash
+# 从 Releases 页面下载安装脚本后运行（会自动 apt 安装前端并下载数据包）
+wget https://github.com/wangjizhu/dashuaipinyin/releases/download/v0.17.4.1/install-ubuntu.sh
+bash install-ubuntu.sh            # ibus 前端（默认）
+bash install-ubuntu.sh fcitx5     # 或改用 fcitx5 前端
+
+# 离线安装：先下载数据包，作为第二个参数传入
+bash install-ubuntu.sh ibus dashuai-pinyin-0.17.4.1-rime-data.tar.gz
+```
+
+装完注销重新登录，到 设置 → 键盘 → 输入源 添加「中文 (Rime)」，
+Super + 空格切换即可打字（输入法列表显示名为 Rime，内核即大帅拼音）。
+
+> 说明：Ubuntu 22.04 及更早版本的系统 librime（1.7.3）过旧、无法运行万象方案，
+> 安装脚本会明确拒绝并提示，请使用 Ubuntu 24.04+。
 
 ## 常用操作
 
