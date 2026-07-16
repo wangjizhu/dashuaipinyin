@@ -41,6 +41,10 @@ patch:
   key_binder/bindings:
     - {when: has_menu, accept: minus, send: Page_Up}
     - {when: has_menu, accept: equal, send: Page_Down}
+    # 搜狗式逗号/句号（<>键）翻页：候选菜单出现时 , 上一页 . 下一页
+    # 代价：组句中途 ,。不再直接上屏标点（先空格上屏再打标点，与搜狗一致）
+    - {when: has_menu, accept: comma, send: Page_Up}
+    - {when: has_menu, accept: period, send: Page_Down}
     - {when: composing, accept: Alt+Left, send: Shift+Left}
     - {when: composing, accept: Alt+Right, send: Shift+Right}
     - {when: composing, accept: Control+w, send: Control+BackSpace}
