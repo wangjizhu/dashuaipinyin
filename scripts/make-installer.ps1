@@ -18,8 +18,8 @@ $OutDir    = Join-Path $RepoRoot 'build-out'
 $MakeNsis  = "${env:ProgramFiles(x86)}\NSIS\makensis.exe"
 
 $WEASEL_VERSION  = '0.17.4'
-$WEASEL_BUILD    = '1'
-$PRODUCT_VERSION = '0.17.4.1'
+$WEASEL_BUILD    = '2'
+$PRODUCT_VERSION = '0.17.4.2'
 
 function Step($msg) { Write-Host "==> $msg" -ForegroundColor Cyan }
 

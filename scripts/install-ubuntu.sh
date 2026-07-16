@@ -14,7 +14,7 @@
 # ============================================================
 set -euo pipefail
 
-VERSION="0.17.4.1"
+VERSION="0.17.4.2"
 DATA_URL="https://github.com/wangjizhu/dashuaipinyin/releases/download/v${VERSION}/dashuai-pinyin-${VERSION}-ubuntu-rime-data.tar.gz"
 
 FRONTEND="${1:-auto}"

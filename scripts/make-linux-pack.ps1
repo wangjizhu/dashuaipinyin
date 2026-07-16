@@ -7,7 +7,7 @@
 #  前置：WSL（任一发行版，只用它的 tar/gzip）
 # ============================================================
 [CmdletBinding()]
-param([string]$Version = '0.17.4.1')
+param([string]$Version = '0.17.4.2')
 
 $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot

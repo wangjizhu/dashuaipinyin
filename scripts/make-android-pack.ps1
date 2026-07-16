@@ -10,7 +10,7 @@
 #  前置：已安装小狼毫（借用其 7z.exe 打 UTF-8 文件名 zip）
 # ============================================================
 [CmdletBinding()]
-param([string]$Version = '0.17.4.1')
+param([string]$Version = '0.17.4.2')
 
 $ErrorActionPreference = 'Stop'
 $RepoRoot = Split-Path -Parent $PSScriptRoot

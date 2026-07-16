@@ -59,12 +59,12 @@ Set-ExecutionPolicy -Scope Process Bypass -Force
 
 ```bash
 # 从 Releases 页面下载安装脚本后运行（会自动 apt 安装前端并下载数据包）
-wget https://github.com/wangjizhu/dashuaipinyin/releases/download/v0.17.4.1/dashuai-pinyin-0.17.4.1-ubuntu-install.sh
-bash dashuai-pinyin-0.17.4.1-ubuntu-install.sh            # ibus 前端（默认）
-bash dashuai-pinyin-0.17.4.1-ubuntu-install.sh fcitx5     # 或改用 fcitx5 前端
+wget https://github.com/wangjizhu/dashuaipinyin/releases/download/v0.17.4.2/dashuai-pinyin-0.17.4.2-ubuntu-install.sh
+bash dashuai-pinyin-0.17.4.2-ubuntu-install.sh            # ibus 前端（默认）
+bash dashuai-pinyin-0.17.4.2-ubuntu-install.sh fcitx5     # 或改用 fcitx5 前端
 
 # 离线安装：先下载数据包，作为第二个参数传入
-bash dashuai-pinyin-0.17.4.1-ubuntu-install.sh ibus dashuai-pinyin-0.17.4.1-ubuntu-rime-data.tar.gz
+bash dashuai-pinyin-0.17.4.2-ubuntu-install.sh ibus dashuai-pinyin-0.17.4.2-ubuntu-rime-data.tar.gz
 ```
 
 装完注销重新登录，到 设置 → 键盘 → 输入源 添加「中文（大帅拼音）」，
@@ -97,7 +97,7 @@ Super + 空格切换即可打字，顶栏指示图标为「帅」。
 | 空格 | 上屏首选 |
 | 数字 1–9 | 选候选词 |
 | 回车 | 拼音字母原样上屏（临时打英文单词很方便） |
-| `-` / `=`（或 PageUp / PageDown） | 候选翻页 |
+| `,` / `.` 或 `-` / `=`（或 PageUp / PageDown） | 候选翻页（逗号上一页、句号下一页） |
 | **`'`（单引号）** | 音节分隔符。连打默认按最长音节切分（`xian` → 先）；要拆开音节就手动加分隔符（`xi'an` → 西安） |
 | **Shift + Delete** | 删掉学错的词：用 ↓ 键把它高亮，再按此键（只对自动学习的词有效） |
 | Ctrl + `` ` `` | 状态面板：中英标点、简繁转换等开关 |
