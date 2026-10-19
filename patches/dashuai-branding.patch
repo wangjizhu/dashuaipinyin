@@ -614,6 +614,247 @@ zucIfglZb%pkZjtVW8wpM;Q`Ye1!Q+1yYMd5g_8r!L}2=J%oKPa>N);9)?Jx3d7rcd
 zmu}arXo%qCeP%EhO@3vj0#!P%i=k^*!DI&+vCT&2v!o`M`HF4+68MdA@|qx?$xJ~y
 Olg|Y6ZFUH;5dr{IcZ_8K
 
+diff --git a/WeaselTSF/Composition.cpp b/WeaselTSF/Composition.cpp
+index e94cea0..07bd7c6 100644
+--- a/WeaselTSF/Composition.cpp
++++ b/WeaselTSF/Composition.cpp
+@@ -72,6 +72,7 @@ STDAPI CStartCompositionEditSession::DoEditSession(TfEditCookie ec) {
+ 
+ void WeaselTSF::_StartComposition(com_ptr<ITfContext> pContext,
+                                   BOOL fCUASWorkaroundEnabled) {
++  _fPositionFromTextExt = FALSE;
+   com_ptr<CStartCompositionEditSession> pStartCompositionEditSession;
+   pStartCompositionEditSession.Attach(new CStartCompositionEditSession(
+       this, pContext, fCUASWorkaroundEnabled, _cand->style().inline_preedit));
+@@ -132,6 +133,75 @@ void WeaselTSF::_EndComposition(com_ptr<ITfContext> pContext, BOOL clear) {
+ }
+ 
+ /* Get Text Extent */
++
++/* Where to put the candidate window when the document cannot tell us.
++ *
++ * Legacy IMM32 applications are served by CUAS, which can only answer
++ * ITfContextView::GetTextExt() when the application keeps its composition
++ * window position up to date.  Terminal emulators of the PuTTY family
++ * (MobaXterm and the like) do not, so GetTextExt() yields nothing usable and
++ * the candidate window used to stay stranded at the desktop origin.  Those
++ * applications do keep a Win32 caret on the text cursor, which is exactly the
++ * position we are after. */
++namespace {
++
++/* height to use for a caret that has none of its own */
++const int kDefaultCaretHeight = 16;
++
++BOOL ClientRectToScreen(HWND hwnd, RECT& rc) {
++  POINT lt = {rc.left, rc.top};
++  POINT rb = {rc.right, rc.bottom};
++  if (!::ClientToScreen(hwnd, &lt) || !::ClientToScreen(hwnd, &rb))
++    return FALSE;
++  ::SetRect(&rc, lt.x, lt.y, rb.x, rb.y);
++  return TRUE;
++}
++
++/* A text service runs inside the application's UI thread, so the caret of the
++ * current thread is the application's own caret; thread 0 (the foreground
++ * thread) covers applications that keep their text window on another thread. */
++BOOL GetCaretRectOnScreen(RECT& rc) {
++  const DWORD threads[] = {::GetCurrentThreadId(), 0};
++  for (size_t i = 0; i < ARRAYSIZE(threads); i++) {
++    GUITHREADINFO gti;
++    gti.cbSize = sizeof(GUITHREADINFO);
++    if (!::GetGUIThreadInfo(threads[i], &gti) || gti.hwndCaret == NULL)
++      continue;
++    rc = gti.rcCaret;
++    if (rc.bottom <= rc.top)
++      rc.bottom = rc.top + kDefaultCaretHeight;
++    if (ClientRectToScreen(gti.hwndCaret, rc))
++      return TRUE;
++  }
++  return FALSE;
++}
++
++/* Last resort: the top-left corner of the text window's client area, which at
++ * least keeps the candidate window on the text being typed into. */
++BOOL GetClientOriginOnScreen(HWND hwnd, RECT& rc) {
++  if (hwnd == NULL)
++    hwnd = ::GetFocus();
++  if (hwnd == NULL)
++    hwnd = ::GetForegroundWindow();
++  if (hwnd == NULL)
++    return FALSE;
++  ::SetRect(&rc, 0, 0, 0, kDefaultCaretHeight);
++  return ClientRectToScreen(hwnd, rc);
++}
++
++/* Some applications answer GetTextExt() in the wrong coordinate space; the
++ * position then lands outside the window it belongs to. */
++BOOL IsOutsideForegroundWindow(const RECT& rc) {
++  HWND hwnd = ::GetForegroundWindow();
++  RECT rcWindow;
++  if (hwnd == NULL || !::GetWindowRect(hwnd, &rcWindow))
++    return FALSE;
++  return rc.left < rcWindow.left || rc.left > rcWindow.right ||
++         rc.top < rcWindow.top || rc.top > rcWindow.bottom;
++}
++
++}  // namespace
++
+ class CGetTextExtentEditSession : public CEditSession {
+  public:
+   CGetTextExtentEditSession(com_ptr<WeaselTSF> pTextService,
+@@ -156,12 +226,10 @@ class CGetTextExtentEditSession : public CEditSession {
+ 
+ STDAPI CGetTextExtentEditSession::DoEditSession(TfEditCookie ec) {
+   com_ptr<ITfInsertAtSelection> pInsertAtSelection;
+-  com_ptr<ITfRange> pRangeComposition;
+-  ITfRange* pRange;
+-  RECT rc;
+-  BOOL fClipped;
++  RECT rc = {0, 0, 0, 0};
++  BOOL fClipped = FALSE;
+   TF_SELECTION selection;
+-  ULONG nSelection;
++  ULONG nSelection = 0;
+ 
+   if (FAILED(_pContext->QueryInterface(IID_ITfInsertAtSelection,
+                                        (LPVOID*)&pInsertAtSelection)))
+@@ -170,40 +238,48 @@ STDAPI CGetTextExtentEditSession::DoEditSession(TfEditCookie ec) {
+                                      &nSelection)))
+     return E_FAIL;
+ 
+-  if (_pComposition != nullptr && _pComposition->GetRange(&pRange) == S_OK) {
+-    pRange->Collapse(ec, TF_ANCHOR_START);
+-  } else {
++  com_ptr<ITfRange> pSelectionRange;
++  if (nSelection == 1)
++    pSelectionRange.Attach(selection.range);
++
++  com_ptr<ITfRange> pRange;
++  if (_pComposition != nullptr) {
++    ITfRange* pCompositionRange = NULL;
++    if (_pComposition->GetRange(&pCompositionRange) == S_OK) {
++      pRange.Attach(pCompositionRange);
++      pRange->Collapse(ec, TF_ANCHOR_START);
++    }
++  }
++  if (pRange == NULL) {
+     // composition end
+     // note: selection.range is always an empty range
+-    pRange = selection.range;
++    pRange = pSelectionRange;
+   }
++  if (pRange == NULL)
++    return S_OK;
+ 
+-  if ((_pContextView->GetTextExt(ec, pRange, &rc, &fClipped)) == S_OK &&
+-      (rc.left != 0 || rc.top != 0)) {
+-    // get the foreground window pos and check if rc from GetTextExt is out of
+-    // window
+-    if (_enhancedPosition) {
+-      HWND hwnd;
+-      RECT rcForegroundWindow;
+-      hwnd = GetForegroundWindow();
+-      ::GetWindowRect(hwnd, &rcForegroundWindow);
+-
+-      if (rc.left < rcForegroundWindow.left ||
+-          rc.left > rcForegroundWindow.right ||
+-          rc.top < rcForegroundWindow.top ||
+-          rc.top > rcForegroundWindow.bottom) {
+-        POINT pt;
+-        bool hasCaret = ::GetCaretPos(&pt);
+-        int offsetx = rcForegroundWindow.left - rc.left + (hasCaret ? pt.x : 0);
+-        int offsety = rcForegroundWindow.top - rc.top + (hasCaret ? pt.y : 0);
+-        rc.left += offsetx;
+-        rc.right += offsetx;
+-        rc.top += offsety;
+-        rc.bottom += offsety;
+-      }
+-    }
++  /* An all-zero rect means neither the document nor CUAS knows where the
++   * input is; that is a failure, not a position at the desktop origin. */
++  BOOL fromTextExt =
++      (_pContextView->GetTextExt(ec, pRange, &rc, &fClipped)) == S_OK &&
++      (rc.left != 0 || rc.top != 0 || rc.right != 0 || rc.bottom != 0);
++
++  if (fromTextExt && (!_enhancedPosition || !IsOutsideForegroundWindow(rc))) {
+     _pTextService->_SetCompositionPosition(rc);
++    return S_OK;
+   }
++
++  /* Nothing usable came back. Keep a position already known to be right for
++   * this composition rather than guessing over it. */
++  if (_pTextService->_HasPositionFromTextExt())
++    return S_OK;
++
++  HWND hwndContext = NULL;
++  _pContextView->GetWnd(&hwndContext);
++  if (GetCaretRectOnScreen(rc) ||
++      (_enhancedPosition && GetClientOriginOnScreen(hwndContext, rc)))
++    _pTextService->_SetCompositionPosition(rc, FALSE);
++
+   return S_OK;
+ }
+ 
+@@ -225,7 +301,7 @@ BOOL WeaselTSF::_UpdateCompositionWindow(com_ptr<ITfContext> pContext) {
+   return SUCCEEDED(hr);
+ }
+ 
+-void WeaselTSF::_SetCompositionPosition(const RECT& rc) {
++void WeaselTSF::_SetCompositionPosition(const RECT& rc, BOOL fromTextExt) {
+   /* Test if rect is valid.
+    * If it is invalid during CUAS test, we need to apply CUAS workaround */
+   if (!_fCUASWorkaroundTested) {
+@@ -235,9 +311,8 @@ void WeaselTSF::_SetCompositionPosition(const RECT& rc) {
+       return;
+     }
+   }
+-  RECT _rc;
+-  _rc.left = _rc.right = rc.left;
+-  _rc.top = _rc.bottom = rc.bottom;
++  if (fromTextExt)
++    _fPositionFromTextExt = TRUE;
+   m_client.UpdateInputPosition(rc);
+   _cand->UpdateInputPosition(rc);
+ }
+diff --git a/WeaselTSF/WeaselTSF.cpp b/WeaselTSF/WeaselTSF.cpp
+index 590d3b8..45dc467 100644
+--- a/WeaselTSF/WeaselTSF.cpp
++++ b/WeaselTSF/WeaselTSF.cpp
+@@ -30,6 +30,7 @@ WeaselTSF::WeaselTSF() {
+   _fTestKeyUpPending = FALSE;
+ 
+   _fCUASWorkaroundTested = _fCUASWorkaroundEnabled = FALSE;
++  _fPositionFromTextExt = FALSE;
+ 
+   _cand = new CCandidateList(this);
+ 
+diff --git a/WeaselTSF/WeaselTSF.h b/WeaselTSF/WeaselTSF.h
+index 696d3cc..fcb260c 100644
+--- a/WeaselTSF/WeaselTSF.h
++++ b/WeaselTSF/WeaselTSF.h
+@@ -118,7 +118,10 @@ class WeaselTSF : public ITfTextInputProcessorEx,
+   void _UpdateComposition(com_ptr<ITfContext> pContext);
+   BOOL _IsComposing();
+   void _SetComposition(com_ptr<ITfComposition> pComposition);
+-  void _SetCompositionPosition(const RECT& rc);
++  void _SetCompositionPosition(const RECT& rc, BOOL fromTextExt = TRUE);
++  /* whether the current position was reported by the document itself
++   * (as opposed to being guessed from the caret / the window) */
++  BOOL _HasPositionFromTextExt() const { return _fPositionFromTextExt; }
+   BOOL _UpdateCompositionWindow(com_ptr<ITfContext> pContext);
+   void _FinalizeComposition();
+   void _AbortComposition(bool clear = true);
+@@ -220,6 +223,10 @@ class WeaselTSF : public ITfTextInputProcessorEx,
+ 
+   /* CUAS Candidate Window Position Workaround */
+   BOOL _fCUASWorkaroundTested, _fCUASWorkaroundEnabled;
++  /* reset when a composition starts, set once the document reports a usable
++   * text extent, so that transient failures never drag the candidate window
++   * away from a position we already know to be correct */
++  BOOL _fPositionFromTextExt;
+ 
+   /* Weasel Related */
+   weasel::Client m_client;
 diff --git a/WeaselTSF/WeaselTSF.rc b/WeaselTSF/WeaselTSF.rc
 index 648bad1d09558829b6f53d375e5469e239cdf6c2..34edd9a9a841a6ba21a5d7d7a8cde340fced02cb 100644
 GIT binary patch
@@ -755,8 +996,8 @@ index 3d5130c..629becd 100644
 -  WriteRegStr HKLM "${REG_UNINST_KEY}" "URLInfoAbout" "https://rime.im/"
 -  WriteRegStr HKLM "${REG_UNINST_KEY}" "HelpLink" "https://rime.im/docs/"
 +  WriteRegStr HKLM "${REG_UNINST_KEY}" "Publisher" "大帅拼音（基于中州韻 RIME · 小狼毫）"
-+  WriteRegStr HKLM "${REG_UNINST_KEY}" "URLInfoAbout" "http://10.5.10.201:8888/dashuai/dashuaipinyin"
-+  WriteRegStr HKLM "${REG_UNINST_KEY}" "HelpLink" "http://10.5.10.201:8888/dashuai/dashuaipinyin"
++  WriteRegStr HKLM "${REG_UNINST_KEY}" "URLInfoAbout" "https://github.com/wangjizhu/dashuaipinyin"
++  WriteRegStr HKLM "${REG_UNINST_KEY}" "HelpLink" "https://github.com/wangjizhu/dashuaipinyin"
    WriteRegDWORD HKLM "${REG_UNINST_KEY}" "NoModify" 1
    WriteRegDWORD HKLM "${REG_UNINST_KEY}" "NoRepair" 1
    WriteUninstaller "$INSTDIR\uninstall.exe"

@@ -1,3 +1,7 @@
 # shell 脚本必须保持 LF：作为 Release 资产被 Linux 用户直接下载执行，
 # CRLF 会导致 bash 报 "\r: command not found"
 *.sh text eol=lf
+
+# 补丁文件必须保持 LF：Windows 默认 core.autocrlf=true 会把补丁转成 CRLF，
+# 而 git apply 无法应用 CRLF 的二进制补丁（报 "git diff header lacks filename information"）
+*.patch text eol=lf

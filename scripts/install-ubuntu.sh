@@ -30,6 +30,11 @@ if [ "$(id -u)" = 0 ]; then
     echo "错误：请以普通用户运行（脚本内部会用 sudo 安装系统包）。" >&2; exit 1
 fi
 
+# 先刷新软件源索引：新装系统/容器里 apt-cache 可能为空或过期，
+# 否则下面的 librime 版本闸门会误报“源里没有 librime-plugin-lua”。
+say "更新软件源索引（需要 sudo）"
+sudo apt-get update -qq
+
 # librime 版本闸门：万象方案要求 librime >= 1.8.5。
 # Ubuntu 22.04 仓库是 1.7.3（配套 librime-lua 过旧），实测症状 = 部署成功但
 # 候选全空 + lua 错误刷屏，所以直接拒绝，不让用户装出一个哑巴输入法。
@@ -56,7 +61,6 @@ say "前端：$FRONTEND    Rime 用户目录：$RIME_DIR"
 
 # ---------- 1. 安装系统包 ----------
 say "安装输入法前端与 librime 插件（需要 sudo）"
-sudo apt-get update -qq
 if [ "$FRONTEND" = fcitx5 ]; then
     sudo apt-get install -y fcitx5-rime librime-plugin-octagram librime-plugin-lua librime-bin
 else

@@ -232,6 +232,10 @@ Start-Process -FilePath $server | Out-Null
 
 Step '完成！'
 Write-Host ''
-Write-Host '  按 Win+空格 切换到【中州韵】即可使用大帅拼音。' -ForegroundColor Green
+Write-Host '  按 Win+空格 切换到【大帅拼音】即可使用。' -ForegroundColor Green
 Write-Host '  建议到 设置 > 时间和语言 > 语言和区域 中调整输入法顺序，' -ForegroundColor Green
 Write-Host '  或卸载不再使用的第三方输入法。' -ForegroundColor Green
+Write-Host ''
+Write-Host '  说明：脚本安装使用官方小狼毫前端，语言栏显示名已改为「大帅拼音」，' -ForegroundColor Yellow
+Write-Host '        但托盘图标与右键菜单仍保留小狼毫原样。需要完整的「帅」字品牌化，' -ForegroundColor Yellow
+Write-Host '        请使用 Releases 完整安装包，或构建后运行 scripts\deploy-dashuai.ps1。' -ForegroundColor Yellow

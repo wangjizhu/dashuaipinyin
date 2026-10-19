@@ -63,15 +63,45 @@ if (-not (Test-Path (Join-Path $WeaselSrc 'weasel.sln'))) {
 
 # ---------- 2. 品牌补丁 ----------
 Step '应用大帅拼音品牌补丁'
+# 两个坑：
+# 1. Windows 默认 core.autocrlf=true，补丁检出后是 CRLF，git apply 无法处理
+#    二进制补丁的 CRLF（报 "git diff header lacks filename information"）。
+#    这里写到临时文件并强制 LF，不修改仓库内的补丁。
+# 2. 旧版脚本只检查 WeaselUtility.h 是否 dirty 来判断“已打补丁”，补丁后来新增
+#    的 hunk 会被静默跳过。改为用反向检查判断是否“完整应用”，否则重置后重打。
+$LfPatch = Join-Path $env:TEMP 'dashuai-branding-lf.patch'
+$patchText = [IO.File]::ReadAllText($PatchFile, [Text.Encoding]::UTF8)
+[IO.File]::WriteAllText($LfPatch, $patchText.Replace("`r`n", "`n"),
+                         (New-Object Text.UTF8Encoding($false)))
+
 Push-Location $WeaselSrc
-$dirty = git status --porcelain -- include/WeaselUtility.h
-if ($dirty) {
-    Write-Host '    源码树已打过补丁，跳过'
-} else {
-    git apply --binary $PatchFile
-    if ($LASTEXITCODE -ne 0) { Pop-Location; throw 'git apply 补丁失败' }
+try {
+    # 反向检查通过 = 整个补丁（含最新 hunk）已经在源码树里
+    git apply --reverse --check --binary $LfPatch 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host '    补丁已完整应用，跳过'
+    } else {
+        git apply --check --binary $LfPatch 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            # 旧版/半套补丁残留：重置已跟踪文件后按当前补丁重打
+            Write-Host '    源码树与补丁不匹配，重置已跟踪文件后重试'
+            git checkout -- .
+            if ($LASTEXITCODE -ne 0) { throw 'git checkout 重置源码树失败' }
+            git apply --check --binary $LfPatch 2>$null
+            if ($LASTEXITCODE -ne 0) {
+                throw "补丁无法应用：$PatchFile（weasel tag 或补丁内容不匹配）"
+            }
+        }
+        git apply --binary $LfPatch
+        if ($LASTEXITCODE -ne 0) { throw 'git apply 补丁失败' }
+        # 后置校验：确保整套补丁都已落地，而不是只应用了一部分
+        git apply --reverse --check --binary $LfPatch 2>$null
+        if ($LASTEXITCODE -ne 0) { throw '补丁应用后校验失败：源码树未包含完整补丁' }
+        Write-Host '    补丁已应用（含全部新增 hunk）'
+    }
+} finally {
+    Pop-Location
 }
-Pop-Location
 
 # ---------- 3. librime SDK（官方预编译，含 lua/octagram/predict 插件） ----------
 Step '获取 librime SDK'
